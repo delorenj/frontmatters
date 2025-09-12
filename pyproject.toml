@@ -5,9 +5,8 @@ description = "A tool to manage and manipulate frontmatter in markdown files."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-  "frontmatter>=3.0.8",
-  "openrouter>=1.0",
   "python-frontmatter>=1.1.0",
+  "openrouter>=1.0",
   "typer>=0.17.4",
 ]
 [project.scripts]
