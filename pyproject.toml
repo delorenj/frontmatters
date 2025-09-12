@@ -10,6 +10,8 @@ dependencies = [
   "python-frontmatter>=1.1.0",
   "typer>=0.17.4",
 ]
+[project.scripts]
+frontmatters = "frontmatters.main:app"
 
 [build-system]
 requires = ["hatchling"]
@@ -23,11 +25,6 @@ dev-dependencies = [
   "ruff>=0.1.0",
   "mypy>=1.0.0",
 ]
-
-[tool.uv.pip]
-index-url = "https://pypi.org/simple"
-extra-index-url = []
-trusted-host = []
 
 [tool.ruff]
 line-length = 88
