@@ -239,12 +239,15 @@ def analyze(
     output_file: Path = typer.Option(None, "--output", "-o", help="Write analysis report to file"),
     min_tag_frequency: int = typer.Option(2, "--min-freq", help="Minimum frequency for tag recommendations"),
     max_categories: int = typer.Option(20, "--max-categories", help="Maximum number of primary categories"),
+    use_agents: bool = typer.Option(False, "--agents", help="Use AI-powered multi-agent analysis (requires OpenRouter API key)"),
 ):
     """
     Analyze JSON tree output and propose optimal organizational strategy.
-    
+
     This command analyzes the structure and content of your documentation
     to propose an optimal tagging and categorization system.
+
+    Use --agents for AI-powered multi-agent analysis (requires API key).
     """
     if not json_file.exists():
         typer.echo(f"Error: JSON file '{json_file}' does not exist", err=True)
@@ -258,16 +261,34 @@ def analyze(
         typer.echo(f"Error: Invalid JSON in '{json_file}': {e}", err=True)
         raise typer.Exit(1)
     
-    # Initialize analyzer
-    analyzer = OrganizationAnalyzer()
-    
-    # Analyze the tree structure
-    analyzer.analyze_tree_json(tree_data)
-    analyzer.analyze_tags()
-    analyzer.generate_category_rules()
-    
-    # Generate report
-    report = generate_analysis_report(analyzer, min_tag_frequency, max_categories)
+    if use_agents:
+        # Use AI-powered multi-agent analysis
+        import asyncio
+        from frontmatters.agents.organizational_workflow import OrganizationalWorkflow
+
+        typer.echo("🤖 Initializing multi-agent organizational analysis system...")
+        typer.echo("⚠️  This will make API calls and may take several minutes...")
+
+        try:
+            workflow = OrganizationalWorkflow()
+            result = asyncio.run(workflow.analyze(str(json_file)))
+            report = generate_agent_analysis_report(result)
+        except Exception as e:
+            typer.echo(f"❌ Agent analysis failed: {e}", err=True)
+            typer.echo("🔄 Falling back to heuristic analysis...", err=True)
+            use_agents = False
+
+    if not use_agents:
+        # Use heuristic analysis
+        analyzer = OrganizationAnalyzer()
+
+        # Analyze the tree structure
+        analyzer.analyze_tree_json(tree_data)
+        analyzer.analyze_tags()
+        analyzer.generate_category_rules()
+
+        # Generate report
+        report = generate_analysis_report(analyzer, min_tag_frequency, max_categories)
     
     # Output report
     if output_file:
@@ -407,6 +428,154 @@ def generate_analysis_report(analyzer: OrganizationAnalyzer, min_freq: int, max_
         
         report_lines.append(f"| {display_path} | {current_tags} | {proposed_tags} | {file_analysis.content_type} |")
     
+    return "\n".join(report_lines)
+
+
+def generate_agent_analysis_report(agent_result: dict) -> str:
+    """Generate a comprehensive report from multi-agent analysis results."""
+    report_lines = []
+
+    # Header
+    final_strategy = agent_result.get('final_strategy', {})
+    content_analyses = agent_result.get('content_analyses', [])
+
+    report_lines.extend([
+        "# AI-Powered Organizational Analysis Report",
+        f"Generated using multi-agent system for {len(content_analyses)} documents",
+        "",
+        "## Executive Summary",
+        "",
+        final_strategy.get('executive_summary', 'No executive summary available'),
+        "",
+    ])
+
+    # Implementation Plan
+    implementation_plan = final_strategy.get('implementation_plan', [])
+    if implementation_plan:
+        report_lines.extend([
+            "## Implementation Plan",
+            "",
+        ])
+        for phase in implementation_plan:
+            report_lines.extend([
+                f"### Phase {phase.get('phase', 'N/A')} - {phase.get('priority', 'Unknown')} Priority",
+                f"**Timeline:** {phase.get('timeline', 'Not specified')}",
+                "**Actions:**",
+            ])
+            for action in phase.get('actions', []):
+                report_lines.append(f"- {action}")
+            report_lines.append("")
+
+    # Categorization Rules
+    categorization_rules = final_strategy.get('categorization_rules', [])
+    if categorization_rules:
+        report_lines.extend([
+            "## AI-Generated Categorization Rules",
+            "",
+        ])
+        for i, rule in enumerate(categorization_rules, 1):
+            report_lines.extend([
+                f"### Rule {i}",
+                f"**Condition:** `{rule.get('rule', 'No rule specified')}`",
+                f"**Priority:** {rule.get('priority', 'Not specified')}",
+                "",
+            ])
+
+    # Tag Taxonomy
+    tag_taxonomy = final_strategy.get('tag_taxonomy', {})
+    if tag_taxonomy:
+        report_lines.extend([
+            "## Recommended Tag Taxonomy",
+            "",
+        ])
+        for parent, children in tag_taxonomy.items():
+            report_lines.append(f"- **{parent}**")
+            for child in children:
+                report_lines.append(f"  - {child}")
+        report_lines.append("")
+
+    # Optimization Results
+    optimization = agent_result.get('optimization', {})
+    if optimization:
+        report_lines.extend([
+            "## Data Science Optimization Results",
+            "",
+        ])
+
+        # Tag consolidation
+        tag_consolidation = optimization.get('tag_consolidation', [])
+        if tag_consolidation:
+            report_lines.extend([
+                "### Tag Consolidation Recommendations",
+                "",
+            ])
+            for consolidation in tag_consolidation:
+                merge_tags = consolidation.get('merge', [])
+                into_tag = consolidation.get('into', 'Unknown')
+                impact = consolidation.get('impact', 'Impact not specified')
+                report_lines.append(f"- Merge `{', '.join(merge_tags)}` → `{into_tag}` ({impact})")
+            report_lines.append("")
+
+        # Metrics
+        metrics = optimization.get('metrics', {})
+        if metrics:
+            report_lines.extend([
+                "### Optimization Metrics",
+                "",
+            ])
+            for metric, value in metrics.items():
+                report_lines.append(f"- **{metric.replace('_', ' ').title()}:** {value}")
+            report_lines.append("")
+
+    # Document-by-Document Analysis
+    if content_analyses:
+        report_lines.extend([
+            "## Document Analysis Results",
+            "",
+            "| Document | Content Type | Confidence | Primary Concepts |",
+            "|----------|--------------|------------|------------------|",
+        ])
+
+        for analysis in content_analyses:
+            path = analysis.get('path', 'Unknown')
+            content_type = analysis.get('content_type', 'Unknown')
+            confidence = analysis.get('confidence_score', 0.0)
+            concepts = analysis.get('key_concepts', [])
+
+            # Truncate long paths
+            display_path = path
+            if len(display_path) > 40:
+                display_path = "..." + display_path[-37:]
+
+            # Truncate concepts list
+            concepts_str = ", ".join(concepts[:3])
+            if len(concepts) > 3:
+                concepts_str += "..."
+
+            report_lines.append(f"| {display_path} | {content_type} | {confidence:.2f} | {concepts_str} |")
+
+    # Success Metrics
+    success_metrics = final_strategy.get('success_metrics', [])
+    if success_metrics:
+        report_lines.extend([
+            "",
+            "## Success Metrics",
+            "",
+        ])
+        for metric in success_metrics:
+            report_lines.append(f"- {metric}")
+
+    # Maintenance Guidelines
+    maintenance_guidelines = final_strategy.get('maintenance_guidelines', [])
+    if maintenance_guidelines:
+        report_lines.extend([
+            "",
+            "## Maintenance Guidelines",
+            "",
+        ])
+        for guideline in maintenance_guidelines:
+            report_lines.append(f"- {guideline}")
+
     return "\n".join(report_lines)
 
 
