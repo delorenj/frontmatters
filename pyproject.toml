@@ -11,9 +11,13 @@ dependencies = [
   "agno>=2.0.0",
   "anthropic>=0.40.0",
   "openai>=1.0.0",
+  "fastmcp>=0.1.0",
+  "uvicorn>=0.30.0",
 ]
 [project.scripts]
 frontmatters = "frontmatters.main:app"
+frontmatters-hybrid = "frontmatters.hybrid:main"
+frontmatters-mcp = "frontmatters.mcp_server:mcp"
 
 [build-system]
 requires = ["hatchling"]

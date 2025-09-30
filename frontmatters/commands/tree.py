@@ -1,10 +1,60 @@
 import os
 import json
+import re
 import typer
 from pathlib import Path
 from frontmatters.core.processor import FrontmatterProcessor
 
 app = typer.Typer()
+
+
+def get_title_with_fallback(filepath: Path, processor: FrontmatterProcessor = None):
+    """
+    Get the title for a file with fallback logic:
+    1. 'title' from frontmatter metadata
+    2. First top-level heading from content
+    3. Titleized version of the filename (without extension)
+    """
+    # For non-markdown files, just return titleized filename
+    if filepath.suffix != ".md":
+        return titleize_filename(filepath.name)
+
+    try:
+        # Use provided processor or create new one
+        if processor is None:
+            processor = FrontmatterProcessor(filepath)
+
+        # 1. Check for 'title' in frontmatter
+        if processor.has_frontmatter("title"):
+            return processor.post.metadata["title"]
+
+        # 2. Look for first top-level heading
+        content = processor.content
+        heading_match = re.search(r'^#\s+(.+)$', content, re.MULTILINE)
+        if heading_match:
+            return heading_match.group(1).strip()
+
+        # 3. Fall back to titleized filename
+        return titleize_filename(filepath.stem)
+
+    except Exception:
+        # If any error occurs, use titleized filename
+        return titleize_filename(filepath.stem if filepath.suffix == ".md" else filepath.name)
+
+
+def titleize_filename(filename: str):
+    """Convert a filename to a title format."""
+    # Remove file extension if present
+    name = filename
+
+    # Replace underscores and hyphens with spaces
+    name = name.replace('_', ' ').replace('-', ' ')
+
+    # Capitalize each word
+    words = name.split()
+    titleized = ' '.join(word.capitalize() for word in words)
+
+    return titleized
 
 
 def format_tree_line(path: Path, level: int, is_last: bool, parent_is_last: list, frontmatter_data: str = ""):
@@ -79,7 +129,7 @@ def build_json_tree(directory: Path, max_depth: int, show_description: bool, sho
 
     try:
         result = {
-            "name": directory.name,
+            "title": titleize_filename(directory.name),
             "path": str(directory),
             "type": "directory",
             "children": []
@@ -101,16 +151,23 @@ def build_json_tree(directory: Path, max_depth: int, show_description: bool, sho
 
         # Add files
         for file_path in files:
+            # Get the title with fallback logic
+            processor = None
+            if file_path.suffix == ".md":
+                try:
+                    processor = FrontmatterProcessor(file_path)
+                except Exception:
+                    pass
+
             file_data = {
-                "name": file_path.name,
+                "title": get_title_with_fallback(file_path, processor),
                 "path": str(file_path),
                 "type": "file"
             }
 
             # Add frontmatter data if it's a markdown file
-            if file_path.suffix == ".md":
+            if file_path.suffix == ".md" and processor:
                 try:
-                    processor = FrontmatterProcessor(file_path)
                     frontmatter_data = {}
 
                     if show_description and processor.has_frontmatter("description"):
