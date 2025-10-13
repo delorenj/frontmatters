@@ -20,12 +20,31 @@ from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 
 from agno.agent import Agent
-from agno.models.openai import OpenAIChat
-from agno.models.anthropic import Claude
+from agno.models.openrouter import OpenRouter
 from agno.team import Team
 from agno.workflow.workflow import Workflow
 from agno.workflow.step import Step, StepInput, StepOutput
 from agno.db.sqlite import SqliteDb
+import re
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def extract_json_from_response(content: str) -> dict:
+    """Extract JSON from response, handling markdown code blocks."""
+    # Try to extract JSON from markdown code blocks
+    json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', content, re.DOTALL)
+    if json_match:
+        json_str = json_match.group(1)
+    else:
+        json_str = content.strip()
+
+    try:
+        return json.loads(json_str)
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse JSON from response. Content: {content[:500]}... Error: {e}")
+        raise
 
 
 @dataclass
@@ -52,12 +71,12 @@ class OrganizationalStrategy:
 
 class ContentAnalyzerAgent:
     """Agent specialized in deep semantic content analysis."""
-    
-    def __init__(self):
+
+    def __init__(self, model_id: str = "anthropic/claude-sonnet-4.5"):
         self.agent = Agent(
             name="Content Analyzer",
             role="Expert content analyst specializing in semantic understanding of technical documentation",
-            model=Claude(id="claude-3-5-sonnet-20241022"),
+            model=OpenRouter(id=model_id, timeout=120.0, max_retries=2),
             instructions=[
                 "You are an expert content analyst with deep understanding of technical documentation.",
                 "Analyze file content for semantic meaning, key concepts, and technical depth.",
@@ -103,29 +122,30 @@ class ContentAnalyzerAgent:
         
         response = await self.agent.arun(prompt)
         try:
-            return json.loads(response.content)
-        except json.JSONDecodeError:
+            return extract_json_from_response(response.content)
+        except (json.JSONDecodeError, Exception) as e:
+            logger.error(f"Content analysis failed for {file_path}: {e}")
             # Fallback if JSON parsing fails
             return {
-                "content_summary": "Analysis failed - unable to parse content",
+                "content_summary": f"Analysis failed - {str(e)}",
                 "primary_purpose": "unknown",
                 "technical_domain": "unknown",
                 "key_concepts": [],
                 "audience_level": "unknown",
                 "content_type": "unknown",
                 "confidence_score": 0.0,
-                "reasoning": "JSON parsing failed"
+                "reasoning": f"JSON parsing failed: {str(e)}"
             }
 
 
 class CategorizerAgent:
     """Agent specialized in determining optimal category placement."""
-    
-    def __init__(self):
+
+    def __init__(self, model_id: str = "anthropic/claude-sonnet-4.5"):
         self.agent = Agent(
             name="Categorizer",
             role="Expert information architect specializing in taxonomic organization",
-            model=Claude(id="claude-3-5-sonnet-20241022"),
+            model=OpenRouter(id=model_id),
             instructions=[
                 "You are an expert information architect with deep knowledge of taxonomic organization.",
                 "Determine optimal category placement for documents based on content analysis.",
@@ -170,25 +190,26 @@ class CategorizerAgent:
         
         response = await self.agent.arun(prompt)
         try:
-            return json.loads(response.content)
-        except json.JSONDecodeError:
+            return extract_json_from_response(response.content)
+        except (json.JSONDecodeError, Exception) as e:
+            logger.error(f"Categorization failed: {e}")
             return {
                 "primary_category": "Uncategorized",
                 "subcategory_path": "Uncategorized",
                 "alternative_categories": [],
-                "category_rationale": "Categorization failed",
+                "category_rationale": f"Categorization failed: {str(e)}",
                 "structural_improvements": []
             }
 
 
 class TaggerAgent:
     """Agent specialized in intelligent tag suggestion."""
-    
-    def __init__(self):
+
+    def __init__(self, model_id: str = "anthropic/claude-sonnet-4.5"):
         self.agent = Agent(
             name="Tagger",
             role="Expert metadata specialist focusing on semantic tagging systems",
-            model=OpenAIChat(id="gpt-4o"),
+            model=OpenRouter(id=model_id),
             instructions=[
                 "You are an expert metadata specialist with deep knowledge of semantic tagging systems.",
                 "Generate relevant, specific, and useful tags based on content analysis.",
@@ -235,26 +256,27 @@ class TaggerAgent:
         
         response = await self.agent.arun(prompt)
         try:
-            return json.loads(response.content)
-        except json.JSONDecodeError:
+            return extract_json_from_response(response.content)
+        except (json.JSONDecodeError, Exception) as e:
+            logger.error(f"Tag generation failed: {e}")
             return {
                 "primary_tags": [],
                 "secondary_tags": [],
                 "technical_tags": [],
                 "contextual_tags": [],
-                "tag_rationale": "Tag generation failed",
+                "tag_rationale": f"Tag generation failed: {str(e)}",
                 "tag_relationships": {}
             }
 
 
 class RelationshipMapperAgent:
     """Agent specialized in identifying document relationships."""
-    
-    def __init__(self):
+
+    def __init__(self, model_id: str = "anthropic/claude-sonnet-4.5"):
         self.agent = Agent(
             name="Relationship Mapper",
             role="Expert knowledge graph specialist focusing on document relationships",
-            model=Claude(id="claude-3-5-sonnet-20241022"),
+            model=OpenRouter(id=model_id),
             instructions=[
                 "You are an expert knowledge graph specialist with deep understanding of document relationships.",
                 "Identify semantic, topical, and structural relationships between documents.",
@@ -300,8 +322,9 @@ class RelationshipMapperAgent:
         
         response = await self.agent.arun(prompt)
         try:
-            return json.loads(response.content)
-        except json.JSONDecodeError:
+            return extract_json_from_response(response.content)
+        except (json.JSONDecodeError, Exception) as e:
+            logger.error(f"Relationship mapping failed: {e}")
             return {
                 "strong_relationships": [],
                 "weak_relationships": [],
@@ -313,11 +336,11 @@ class RelationshipMapperAgent:
 class DataScienceOptimizerAgent:
     """Agent specialized in statistical analysis and optimization."""
 
-    def __init__(self):
+    def __init__(self, model_id: str = "anthropic/claude-sonnet-4.5"):
         self.agent = Agent(
             name="Data Science Optimizer",
             role="Expert data scientist specializing in information architecture optimization",
-            model=OpenAIChat(id="gpt-4o"),
+            model=OpenRouter(id=model_id),
             instructions=[
                 "You are an expert data scientist with deep knowledge of information architecture optimization.",
                 "Analyze tag frequency distributions, category balance, and organizational efficiency.",
@@ -370,8 +393,9 @@ class DataScienceOptimizerAgent:
 
         response = await self.agent.arun(prompt)
         try:
-            return json.loads(response.content)
-        except json.JSONDecodeError:
+            return extract_json_from_response(response.content)
+        except (json.JSONDecodeError, Exception) as e:
+            logger.error(f"Optimization failed: {e}")
             return {
                 "tag_consolidation": [],
                 "category_rebalancing": [],
@@ -385,11 +409,11 @@ class DataScienceOptimizerAgent:
 class OrganizationalStrategistAgent:
     """Agent specialized in high-level organizational strategy."""
 
-    def __init__(self):
+    def __init__(self, model_id: str = "anthropic/claude-sonnet-4.5"):
         self.agent = Agent(
             name="Organizational Strategist",
             role="Expert organizational strategist with deep knowledge of information architecture principles",
-            model=Claude(id="claude-3-5-sonnet-20241022"),
+            model=OpenRouter(id=model_id),
             instructions=[
                 "You are an expert organizational strategist with deep knowledge of information architecture.",
                 "Synthesize all agent analyses into a coherent organizational strategy.",
@@ -436,10 +460,11 @@ class OrganizationalStrategistAgent:
 
         response = await self.agent.arun(prompt)
         try:
-            return json.loads(response.content)
-        except json.JSONDecodeError:
+            return extract_json_from_response(response.content)
+        except (json.JSONDecodeError, Exception) as e:
+            logger.error(f"Strategy creation failed: {e}")
             return {
-                "executive_summary": "Strategy creation failed",
+                "executive_summary": f"Strategy creation failed: {str(e)}",
                 "implementation_plan": [],
                 "categorization_rules": [],
                 "tag_taxonomy": {},
@@ -452,19 +477,19 @@ class OrganizationalStrategistAgent:
 class OrganizationalWorkflow:
     """Main workflow orchestrating all organizational agents."""
 
-    def __init__(self, db_path: str = "tmp/organizational_analysis.db"):
+    def __init__(self, db_path: str = "tmp/organizational_analysis.db", model_id: str = "anthropic/claude-sonnet-4.5"):
         self.db = SqliteDb(
             session_table="organizational_session",
             db_file=db_path,
         )
 
-        # Initialize all agents
-        self.content_analyzer = ContentAnalyzerAgent()
-        self.categorizer = CategorizerAgent()
-        self.tagger = TaggerAgent()
-        self.relationship_mapper = RelationshipMapperAgent()
-        self.optimizer = DataScienceOptimizerAgent()
-        self.strategist = OrganizationalStrategistAgent()
+        # Initialize all agents with the specified model
+        self.content_analyzer = ContentAnalyzerAgent(model_id=model_id)
+        self.categorizer = CategorizerAgent(model_id=model_id)
+        self.tagger = TaggerAgent(model_id=model_id)
+        self.relationship_mapper = RelationshipMapperAgent(model_id=model_id)
+        self.optimizer = DataScienceOptimizerAgent(model_id=model_id)
+        self.strategist = OrganizationalStrategistAgent(model_id=model_id)
 
         # Create workflow steps
         self.workflow = self._create_workflow()
@@ -584,10 +609,14 @@ class OrganizationalWorkflow:
         documents = []
 
         def extract_recursive(node):
-            if node.get("type") == "file" and node["name"].endswith(".md"):
+            # Support both 'name' and 'title' fields for compatibility
+            node_name = node.get("name") or node.get("title", "")
+            node_path = node.get("path", "")
+
+            if node.get("type") == "file" and node_path.endswith(".md"):
                 doc = {
-                    "path": node["path"],
-                    "name": node["name"],
+                    "path": node_path,
+                    "name": node_name,
                 }
                 if "frontmatter" in node:
                     doc.update(node["frontmatter"])
@@ -619,4 +648,9 @@ class OrganizationalWorkflow:
             tree_data = f.read()
 
         result = await self.workflow.arun(tree_data)
-        return json.loads(result.content)
+
+        # Check if workflow failed
+        if result.status.value == 'ERROR':
+            raise RuntimeError(f"Workflow failed: {result.content}")
+
+        return extract_json_from_response(result.content)

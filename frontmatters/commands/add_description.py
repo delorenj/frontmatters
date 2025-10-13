@@ -6,6 +6,38 @@ from frontmatters.core.processor import FrontmatterProcessor
 
 app = typer.Typer()
 
+def should_skip_dir(dir_name: str) -> bool:
+    """Check if directory should be skipped"""
+    skip_patterns = [
+        # Hidden directories
+        lambda d: d.startswith('.'),
+        # Python virtual environments
+        lambda d: d in ('venv', '.venv', 'env', '.env'),
+        # Cache directories
+        lambda d: d in ('__pycache__', '.pytest_cache', '.ruff_cache'),
+        # Node.js
+        lambda d: d == 'node_modules',
+        # Build directories
+        lambda d: d in ('build', 'dist', '.next', '.nuxt'),
+        # Version control
+        lambda d: d in ('.git', '.svn', '.hg'),
+        # IDE directories
+        lambda d: d in ('.vscode', '.idea'),
+        # OS-specific
+        lambda d: d in ('__MACOSX', '.DS_Store'),
+        # Common development directories
+        lambda d: d in ('target', '.gradle', '.mvn'),
+    ]
+    return any(pattern(dir_name) for pattern in skip_patterns)
+
+def read_gitignore(path: Path) -> set:
+    """Read .gitignore patterns from directory"""
+    gitignore_path = path / ".gitignore"
+    if gitignore_path.exists():
+        with open(gitignore_path, 'r', encoding='utf-8') as f:
+            return set(line.strip() for line in f if line.strip() and not line.startswith('#'))
+    return set()
+
 def get_description(content, api_key, model="moonshotai/kimi-k2"):
     """Generate description using OpenRouter API"""
     truncated = content[:2000] + "..." if len(content) > 2000 else content
@@ -65,6 +97,9 @@ def add(
             print(f"Error processing {path}: {e}")
     elif path.is_dir():
         for root, dirs, files in os.walk(path):
+            # Filter out directories to skip
+            dirs[:] = [d for d in dirs if not should_skip_dir(d)]
+            
             level = len(Path(root).relative_to(path).parts)
             if level >= depth:
                 dirs.clear()

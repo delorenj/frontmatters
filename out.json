@@ -1,0 +1,230 @@
+{
+  "title": "",
+  "path": ".",
+  "type": "directory",
+  "children": [
+    {
+      "title": "Data",
+      "path": "data",
+      "type": "directory",
+      "children": [
+        {
+          "title": "Cipher Sessions.db Shm",
+          "path": "data/cipher-sessions.db-shm",
+          "type": "file"
+        },
+        {
+          "title": "Cipher Sessions.db Wal",
+          "path": "data/cipher-sessions.db-wal",
+          "type": "file"
+        }
+      ]
+    },
+    {
+      "title": "Docs",
+      "path": "docs",
+      "type": "directory",
+      "children": [
+        {
+          "title": "Features Report and Suggestions",
+          "path": "docs/features_report.md",
+          "type": "file"
+        }
+      ]
+    },
+    {
+      "title": "Frontmatters",
+      "path": "frontmatters",
+      "type": "directory",
+      "children": [
+        {
+          "title": "Pycache",
+          "path": "frontmatters/__pycache__",
+          "type": "directory",
+          "children": [
+            {
+              "title": "Init .cpython 313.pyc",
+              "path": "frontmatters/__pycache__/__init__.cpython-313.pyc",
+              "type": "file"
+            },
+            {
+              "title": "Main.cpython 313.pyc",
+              "path": "frontmatters/__pycache__/main.cpython-313.pyc",
+              "type": "file"
+            }
+          ]
+        },
+        {
+          "title": "Agents",
+          "path": "frontmatters/agents",
+          "type": "directory",
+          "children": [
+            {
+              "title": "Init .py",
+              "path": "frontmatters/agents/__init__.py",
+              "type": "file"
+            },
+            {
+              "title": "Organizational Workflow.py",
+              "path": "frontmatters/agents/organizational_workflow.py",
+              "type": "file"
+            }
+          ]
+        },
+        {
+          "title": "Commands",
+          "path": "frontmatters/commands",
+          "type": "directory",
+          "children": [
+            {
+              "title": "Init .py",
+              "path": "frontmatters/commands/__init__.py",
+              "type": "file"
+            },
+            {
+              "title": "Add Description.py",
+              "path": "frontmatters/commands/add_description.py",
+              "type": "file"
+            },
+            {
+              "title": "Organize.py",
+              "path": "frontmatters/commands/organize.py",
+              "type": "file"
+            },
+            {
+              "title": "Tree.py",
+              "path": "frontmatters/commands/tree.py",
+              "type": "file"
+            }
+          ]
+        },
+        {
+          "title": "Core",
+          "path": "frontmatters/core",
+          "type": "directory",
+          "children": [
+            {
+              "title": "Init .py",
+              "path": "frontmatters/core/__init__.py",
+              "type": "file"
+            },
+            {
+              "title": "Processor.py",
+              "path": "frontmatters/core/processor.py",
+              "type": "file"
+            }
+          ]
+        },
+        {
+          "title": "Init .py",
+          "path": "frontmatters/__init__.py",
+          "type": "file"
+        },
+        {
+          "title": "Main .py",
+          "path": "frontmatters/__main__.py",
+          "type": "file"
+        },
+        {
+          "title": "Hybrid.py",
+          "path": "frontmatters/hybrid.py",
+          "type": "file"
+        },
+        {
+          "title": "Main.py",
+          "path": "frontmatters/main.py",
+          "type": "file"
+        },
+        {
+          "title": "Mcp Server.py",
+          "path": "frontmatters/mcp_server.py",
+          "type": "file"
+        }
+      ]
+    },
+    {
+      "title": "Tests",
+      "path": "tests",
+      "type": "directory",
+      "children": [
+        {
+          "title": "Pycache",
+          "path": "tests/__pycache__",
+          "type": "directory",
+          "children": [
+            {
+              "title": "Init .cpython 313.pyc",
+              "path": "tests/__pycache__/__init__.cpython-313.pyc",
+              "type": "file"
+            },
+            {
+              "title": "Test Add Description.cpython 313 Pytest 8.4.2.pyc",
+              "path": "tests/__pycache__/test_add_description.cpython-313-pytest-8.4.2.pyc",
+              "type": "file"
+            }
+          ]
+        },
+        {
+          "title": "Init .py",
+          "path": "tests/__init__.py",
+          "type": "file"
+        },
+        {
+          "title": "Test Add Description.py",
+          "path": "tests/test_add_description.py",
+          "type": "file"
+        },
+        {
+          "title": "Test Agents.py",
+          "path": "tests/test_agents.py",
+          "type": "file"
+        },
+        {
+          "title": "Test Organize.py",
+          "path": "tests/test_organize.py",
+          "type": "file"
+        },
+        {
+          "title": "Test Tree.py",
+          "path": "tests/test_tree.py",
+          "type": "file"
+        }
+      ]
+    },
+    {
+      "title": "Documentation Organization Analysis Report",
+      "path": "analysis.md",
+      "type": "file"
+    },
+    {
+      "title": "Claude Flow",
+      "path": "claude-flow",
+      "type": "file"
+    },
+    {
+      "title": "Frontmatters Development Guide",
+      "path": "CRUSH.md",
+      "type": "file"
+    },
+    {
+      "title": "FastMCP Integration for Frontmatters",
+      "path": "MCP_INTEGRATION.md",
+      "type": "file"
+    },
+    {
+      "title": "Pyproject.toml",
+      "path": "pyproject.toml",
+      "type": "file"
+    },
+    {
+      "title": "Frontmatters",
+      "path": "README.md",
+      "type": "file"
+    },
+    {
+      "title": "Uv.lock",
+      "path": "uv.lock",
+      "type": "file"
+    }
+  ]
+}

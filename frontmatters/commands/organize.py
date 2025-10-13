@@ -55,37 +55,41 @@ class OrganizationAnalyzer:
         
     def _extract_files_recursive(self, node: dict, path_context: List[str]) -> None:
         """Recursively extract files from tree structure."""
-        if node.get("type") == "file" and node["name"].endswith(".md"):
+        # Support both 'name' and 'title' fields for compatibility
+        node_name = node.get("name") or node.get("title", "")
+
+        if node.get("type") == "file" and node_name.endswith(".md"):
             # Extract directory context from path
             full_path = node["path"]
             directory_parts = Path(full_path).parent.parts
-            
+
             # Get existing tags and description from frontmatter
             frontmatter = node.get("frontmatter", {})
             existing_tags = frontmatter.get("tags", [])
             description = frontmatter.get("description", "")
-            
+
             # Propose tags based on file analysis
-            proposed_tags = self._propose_tags(node["name"], directory_parts, description)
-            
+            proposed_tags = self._propose_tags(node_name, directory_parts, description)
+
             # Determine content type
-            content_type = self._determine_content_type(node["name"], directory_parts, description)
-            
+            content_type = self._determine_content_type(node_name, directory_parts, description)
+
             file_analysis = FileAnalysis(
                 path=full_path,
-                name=node["name"],
+                name=node_name,
                 existing_tags=existing_tags if isinstance(existing_tags, list) else [],
                 proposed_tags=proposed_tags,
                 content_type=content_type,
                 directory_context=list(directory_parts),
                 description=description
             )
-            
+
             self.files.append(file_analysis)
-            
+
         # Recurse into children
         for child in node.get("children", []):
-            new_context = path_context + [node["name"]] if node.get("type") == "directory" else path_context
+            child_name = child.get("name") or child.get("title", "")
+            new_context = path_context + [child_name] if child.get("type") == "directory" else path_context
             self._extract_files_recursive(child, new_context)
     
     def _propose_tags(self, filename: str, directory_parts: Tuple[str, ...], description: str) -> List[str]:
@@ -240,6 +244,7 @@ def analyze(
     min_tag_frequency: int = typer.Option(2, "--min-freq", help="Minimum frequency for tag recommendations"),
     max_categories: int = typer.Option(20, "--max-categories", help="Maximum number of primary categories"),
     use_agents: bool = typer.Option(False, "--agents", help="Use AI-powered multi-agent analysis (requires OpenRouter API key)"),
+    model: str = typer.Option("anthropic/claude-sonnet-4.5", "--model", "-m", help="Model to use for agent analysis"),
 ):
     """
     Analyze JSON tree output and propose optimal organizational strategy.
@@ -267,18 +272,13 @@ def analyze(
         from frontmatters.agents.organizational_workflow import OrganizationalWorkflow
 
         typer.echo("🤖 Initializing multi-agent organizational analysis system...")
+        typer.echo(f"📊 Using model: {model}")
         typer.echo("⚠️  This will make API calls and may take several minutes...")
 
-        try:
-            workflow = OrganizationalWorkflow()
-            result = asyncio.run(workflow.analyze(str(json_file)))
-            report = generate_agent_analysis_report(result)
-        except Exception as e:
-            typer.echo(f"❌ Agent analysis failed: {e}", err=True)
-            typer.echo("🔄 Falling back to heuristic analysis...", err=True)
-            use_agents = False
-
-    if not use_agents:
+        workflow = OrganizationalWorkflow(model_id=model)
+        result = asyncio.run(workflow.analyze(str(json_file)))
+        report = generate_agent_analysis_report(result)
+    else:
         # Use heuristic analysis
         analyzer = OrganizationAnalyzer()
 

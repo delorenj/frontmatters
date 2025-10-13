@@ -13,6 +13,8 @@ dependencies = [
   "openai>=1.0.0",
   "fastmcp>=0.1.0",
   "uvicorn>=0.30.0",
+  "fastapi>=0.118.0",
+  "sqlalchemy>=2.0.43",
 ]
 [project.scripts]
 frontmatters = "frontmatters.main:app"
