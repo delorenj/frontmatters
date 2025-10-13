@@ -1,0 +1,168 @@
+{
+  "name": "Phase 1: Summarization & Title Generation",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "start",
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [280, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "anthropic/claude-sonnet-4.5"
+            },
+            {
+              "name": "messages",
+              "value": "={{ JSON.stringify([{\n  role: 'user',\n  content: `You are an expert at analyzing and summarizing documents for knowledge management systems.\n\nYour task is to:\n1. Generate a concise, descriptive title (max 8 words) that captures the essence of this content\n2. Write a 2-3 sentence high-level summary that describes what this document is about\n\nIMPORTANT: Respond ONLY with valid JSON in this exact format:\n{\n  \"title\": \"Your Generated Title\",\n  \"summary\": \"Your 2-3 sentence summary here.\"\n}\n\nDo not include any text outside the JSON structure. No backticks, no explanations.\n\nDocument content:\n${$json.fullTranscript.substring(0, 4000)}`\n}]) }}"
+            },
+            {
+              "name": "max_tokens",
+              "value": "300"
+            },
+            {
+              "name": "temperature",
+              "value": "0.3"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300],
+      "id": "ai-summarization",
+      "name": "AI Summarization & Title"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Parse AI response and extract title/summary\nconst response = items[0].json;\nlet aiResult;\n\ntry {\n  // Get the AI response text\n  const responseText = response.choices[0].message.content;\n  \n  // Strip markdown code blocks if present\n  const cleanedText = responseText\n    .replace(/```json\\n?/g, '')\n    .replace(/```\\n?/g, '')\n    .trim();\n  \n  // Parse JSON\n  aiResult = JSON.parse(cleanedText);\n} catch (e) {\n  console.error('Failed to parse AI response:', e);\n  // Fallback\n  aiResult = {\n    title: $input.first().json.metadata.rawTitle || 'Untitled Document',\n    summary: 'Summary generation failed. Manual review required.'\n  };\n}\n\n// Merge with existing data\nconst inputData = $input.first().json;\n\nreturn [{\n  json: {\n    ...inputData,\n    title: aiResult.title,\n    summary: aiResult.summary,\n    processingStage: 'summarized'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 300],
+      "id": "parse-ai-response",
+      "name": "Parse AI Response"
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [[{"node": "AI Summarization & Title", "type": "main", "index": 0}]]
+    },
+    "AI Summarization & Title": {
+      "main": [[{"node": "Parse AI Response", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
+EOF
+cat phase1-summarization.json
+Output
+
+{
+  "name": "Phase 1: Summarization & Title Generation",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "start",
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [280, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "anthropic/claude-sonnet-4.5"
+            },
+            {
+              "name": "messages",
+              "value": "={{ JSON.stringify([{\n  role: 'user',\n  content: `You are an expert at analyzing and summarizing documents for knowledge management systems.\n\nYour task is to:\n1. Generate a concise, descriptive title (max 8 words) that captures the essence of this content\n2. Write a 2-3 sentence high-level summary that describes what this document is about\n\nIMPORTANT: Respond ONLY with valid JSON in this exact format:\n{\n  \"title\": \"Your Generated Title\",\n  \"summary\": \"Your 2-3 sentence summary here.\"\n}\n\nDo not include any text outside the JSON structure. No backticks, no explanations.\n\nDocument content:\n${$json.fullTranscript.substring(0, 4000)}`\n}]) }}"
+            },
+            {
+              "name": "max_tokens",
+              "value": "300"
+            },
+            {
+              "name": "temperature",
+              "value": "0.3"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300],
+      "id": "ai-summarization",
+      "name": "AI Summarization & Title"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Parse AI response and extract title/summary\nconst response = items[0].json;\nlet aiResult;\n\ntry {\n  // Get the AI response text\n  const responseText = response.choices[0].message.content;\n  \n  // Strip markdown code blocks if present\n  const cleanedText = responseText\n    .replace(/```json\\n?/g, '')\n    .replace(/```\\n?/g, '')\n    .trim();\n  \n  // Parse JSON\n  aiResult = JSON.parse(cleanedText);\n} catch (e) {\n  console.error('Failed to parse AI response:', e);\n  // Fallback\n  aiResult = {\n    title: $input.first().json.metadata.rawTitle || 'Untitled Document',\n    summary: 'Summary generation failed. Manual review required.'\n  };\n}\n\n// Merge with existing data\nconst inputData = $input.first().json;\n\nreturn [{\n  json: {\n    ...inputData,\n    title: aiResult.title,\n    summary: aiResult.summary,\n    processingStage: 'summarized'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 300],
+      "id": "parse-ai-response",
+      "name": "Parse AI Response"
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [[{"node": "AI Summarization & Title", "type": "main", "index": 0}]]
+    },
+    "AI Summarization & Title": {
+      "main": [[{"node": "Parse AI Response", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

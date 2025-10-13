@@ -1,0 +1,168 @@
+{
+  "name": "Phase 2: Single Category Classification",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "start",
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [280, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "anthropic/claude-sonnet-4.5"
+            },
+            {
+              "name": "messages",
+              "value": "={{ JSON.stringify([{\n  role: 'user',\n  content: `You are an expert knowledge taxonomy classifier. Classify this document into EXACTLY ONE category.\n\nAvailable Categories (choose ONE):\n- Project: A formal 33GOD project with database ID, multiple components, repositories\n- Prompt: Houses/showcases/demos/tracks an LLM prompt\n- Thread: Contains full or partial LLM conversation thread\n- Documentation: Documents something (project-related, third-party lib, framework, how-to, API docs, README)\n- Research: Gathers context for pioneering AI development workflows (gathered or synthesized)\n- Blog: Content mined/synthesized for blog writing, or the blog itself, or drafts\n- Idea: Arbitrary synthesized thought stored for its importance or weight in an area of interest\n- Reference: Directs to a particular resource (git repo, video, article to check out)\n- Example: Code snippets or repos that LLMs find useful for a technology/stack\n- Transcript: Speech-to-text from recording (audio/video, meeting, OBS recording)\n- Infrastructure: Documents home network/infrastructure (inventory, topology, services, devices, troubleshooting)\n- Family: Anything relating to kids, school, home life\n- Finance: Money-related content\n\nDocument Title: ${$json.title}\nSummary: ${$json.summary}\nSource: ${$json.metadata.source}\n\nFirst 1000 chars of content:\n${$json.fullTranscript.substring(0, 1000)}\n\nIMPORTANT: Respond ONLY with valid JSON in this exact format:\n{\n  \"category\": \"Category Name\",\n  \"confidence\": 0.95,\n  \"reasoning\": \"Brief explanation for this classification\"\n}\n\nDO NOT output anything other than valid JSON. No backticks, no markdown, no explanations.`\n}]) }}"
+            },
+            {
+              "name": "max_tokens",
+              "value": "200"
+            },
+            {
+              "name": "temperature",
+              "value": "0.2"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300],
+      "id": "ai-categorization",
+      "name": "AI Category Classification"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Parse AI response and validate category\nconst response = items[0].json;\nconst inputData = $input.first().json;\n\nconst VALID_CATEGORIES = [\n  'Project', 'Prompt', 'Thread', 'Documentation', 'Research',\n  'Blog', 'Idea', 'Reference', 'Example', 'Transcript',\n  'Infrastructure', 'Family', 'Finance'\n];\n\nlet categoryResult;\n\ntry {\n  const responseText = response.choices[0].message.content;\n  const cleanedText = responseText\n    .replace(/```json\\n?/g, '')\n    .replace(/```\\n?/g, '')\n    .trim();\n  \n  categoryResult = JSON.parse(cleanedText);\n  \n  // Validate category\n  if (!VALID_CATEGORIES.includes(categoryResult.category)) {\n    console.warn(`Invalid category: ${categoryResult.category}, defaulting to Documentation`);\n    categoryResult.category = 'Documentation';\n    categoryResult.confidence = 0.5;\n  }\n} catch (e) {\n  console.error('Failed to parse categorization:', e);\n  // Default fallback based on source\n  categoryResult = {\n    category: inputData.metadata.source === 'fireflies' ? 'Transcript' : 'Documentation',\n    confidence: 0.3,\n    reasoning: 'Auto-classified due to parsing error'\n  };\n}\n\nreturn [{\n  json: {\n    ...inputData,\n    category: categoryResult.category,\n    categoryConfidence: categoryResult.confidence,\n    categoryReasoning: categoryResult.reasoning,\n    processingStage: 'categorized'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 300],
+      "id": "parse-category",
+      "name": "Parse & Validate Category"
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [[{"node": "AI Category Classification", "type": "main", "index": 0}]]
+    },
+    "AI Category Classification": {
+      "main": [[{"node": "Parse & Validate Category", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
+EOF
+cat phase2-categorization.json
+Output
+
+{
+  "name": "Phase 2: Single Category Classification",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "start",
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [280, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "anthropic/claude-sonnet-4.5"
+            },
+            {
+              "name": "messages",
+              "value": "={{ JSON.stringify([{\n  role: 'user',\n  content: `You are an expert knowledge taxonomy classifier. Classify this document into EXACTLY ONE category.\n\nAvailable Categories (choose ONE):\n- Project: A formal 33GOD project with database ID, multiple components, repositories\n- Prompt: Houses/showcases/demos/tracks an LLM prompt\n- Thread: Contains full or partial LLM conversation thread\n- Documentation: Documents something (project-related, third-party lib, framework, how-to, API docs, README)\n- Research: Gathers context for pioneering AI development workflows (gathered or synthesized)\n- Blog: Content mined/synthesized for blog writing, or the blog itself, or drafts\n- Idea: Arbitrary synthesized thought stored for its importance or weight in an area of interest\n- Reference: Directs to a particular resource (git repo, video, article to check out)\n- Example: Code snippets or repos that LLMs find useful for a technology/stack\n- Transcript: Speech-to-text from recording (audio/video, meeting, OBS recording)\n- Infrastructure: Documents home network/infrastructure (inventory, topology, services, devices, troubleshooting)\n- Family: Anything relating to kids, school, home life\n- Finance: Money-related content\n\nDocument Title: ${$json.title}\nSummary: ${$json.summary}\nSource: ${$json.metadata.source}\n\nFirst 1000 chars of content:\n${$json.fullTranscript.substring(0, 1000)}\n\nIMPORTANT: Respond ONLY with valid JSON in this exact format:\n{\n  \"category\": \"Category Name\",\n  \"confidence\": 0.95,\n  \"reasoning\": \"Brief explanation for this classification\"\n}\n\nDO NOT output anything other than valid JSON. No backticks, no markdown, no explanations.`\n}]) }}"
+            },
+            {
+              "name": "max_tokens",
+              "value": "200"
+            },
+            {
+              "name": "temperature",
+              "value": "0.2"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300],
+      "id": "ai-categorization",
+      "name": "AI Category Classification"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Parse AI response and validate category\nconst response = items[0].json;\nconst inputData = $input.first().json;\n\nconst VALID_CATEGORIES = [\n  'Project', 'Prompt', 'Thread', 'Documentation', 'Research',\n  'Blog', 'Idea', 'Reference', 'Example', 'Transcript',\n  'Infrastructure', 'Family', 'Finance'\n];\n\nlet categoryResult;\n\ntry {\n  const responseText = response.choices[0].message.content;\n  const cleanedText = responseText\n    .replace(/```json\\n?/g, '')\n    .replace(/```\\n?/g, '')\n    .trim();\n  \n  categoryResult = JSON.parse(cleanedText);\n  \n  // Validate category\n  if (!VALID_CATEGORIES.includes(categoryResult.category)) {\n    console.warn(`Invalid category: ${categoryResult.category}, defaulting to Documentation`);\n    categoryResult.category = 'Documentation';\n    categoryResult.confidence = 0.5;\n  }\n} catch (e) {\n  console.error('Failed to parse categorization:', e);\n  // Default fallback based on source\n  categoryResult = {\n    category: inputData.metadata.source === 'fireflies' ? 'Transcript' : 'Documentation',\n    confidence: 0.3,\n    reasoning: 'Auto-classified due to parsing error'\n  };\n}\n\nreturn [{\n  json: {\n    ...inputData,\n    category: categoryResult.category,\n    categoryConfidence: categoryResult.confidence,\n    categoryReasoning: categoryResult.reasoning,\n    processingStage: 'categorized'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 300],
+      "id": "parse-category",
+      "name": "Parse & Validate Category"
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [[{"node": "AI Category Classification", "type": "main", "index": 0}]]
+    },
+    "AI Category Classification": {
+      "main": [[{"node": "Parse & Validate Category", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

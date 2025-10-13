@@ -1,0 +1,102 @@
+{
+  "name": "Fireflies → Obsidian Integration",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "trigger-start",
+      "name": "Start (from Fireflies workflow)",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [280, 300]
+    },
+    {
+      "parameters": {
+        "workflow": "={{ $workflow.id }}",
+        "workflowId": "obsidian-note-processor"
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [500, 300],
+      "id": "process-with-obsidian",
+      "name": "Process with Obsidian Pipeline"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Log results\nconst result = items[0].json;\n\nconsole.log('Obsidian processing complete:');\nconsole.log(`- Title: ${result.message}`);\nconsole.log(`- Category: ${result.category}`);\nconsole.log(`- File: ${result.filepath}`);\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 300],
+      "id": "log-results",
+      "name": "Log Results"
+    }
+  ],
+  "connections": {
+    "Start (from Fireflies workflow)": {
+      "main": [[{"node": "Process with Obsidian Pipeline", "type": "main", "index": 0}]]
+    },
+    "Process with Obsidian Pipeline": {
+      "main": [[{"node": "Log Results", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
+EOF
+cat fireflies-to-obsidian-integration.json
+Output
+
+{
+  "name": "Fireflies → Obsidian Integration",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "trigger-start",
+      "name": "Start (from Fireflies workflow)",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [280, 300]
+    },
+    {
+      "parameters": {
+        "workflow": "={{ $workflow.id }}",
+        "workflowId": "obsidian-note-processor"
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [500, 300],
+      "id": "process-with-obsidian",
+      "name": "Process with Obsidian Pipeline"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Log results\nconst result = items[0].json;\n\nconsole.log('Obsidian processing complete:');\nconsole.log(`- Title: ${result.message}`);\nconsole.log(`- Category: ${result.category}`);\nconsole.log(`- File: ${result.filepath}`);\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 300],
+      "id": "log-results",
+      "name": "Log Results"
+    }
+  ],
+  "connections": {
+    "Start (from Fireflies workflow)": {
+      "main": [[{"node": "Process with Obsidian Pipeline", "type": "main", "index": 0}]]
+    },
+    "Process with Obsidian Pipeline": {
+      "main": [[{"node": "Log Results", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

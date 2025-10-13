@@ -1,0 +1,168 @@
+{
+  "name": "Phase 5: Write to Obsidian with Frontmatter",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "start",
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [280, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Build complete markdown file with frontmatter\nconst data = items[0].json;\n\n// Format date for filename\nconst dateCreated = new Date(data.metadata.dateCreated);\nconst dateStr = dateCreated.toISOString().split('T')[0];\nconst timeStr = dateCreated.toTimeString().split(' ')[0].replace(/:/g, '-');\n\n// Sanitize title for filename\nfunction sanitizeFilename(str) {\n  return str\n    .replace(/[^a-zA-Z0-9-_ ]/g, '_')\n    .replace(/_{2,}/g, '_')\n    .replace(/^_|_$/g, '')\n    .substring(0, 100);\n}\n\nconst safeTitle = sanitizeFilename(data.title);\nconst filename = `${dateStr}_${timeStr}_${safeTitle}.md`;\n\n// Determine subdirectory based on category\nconst categoryPaths = {\n  'Project': 'Projects',\n  'Prompt': 'AI/Prompts',\n  'Thread': 'AI/Threads',\n  'Documentation': 'Documentation',\n  'Research': 'Research',\n  'Blog': 'Blog',\n  'Idea': 'Ideas',\n  'Reference': 'References',\n  'Example': 'Examples',\n  'Transcript': 'Transcripts',\n  'Infrastructure': 'Infrastructure',\n  'Family': 'Family',\n  'Finance': 'Finance'\n};\n\nconst subdir = categoryPaths[data.category] || 'Uncategorized';\nconst fullPath = `/home/delorenj/obsidian-vault/${subdir}/${filename}`;\n\n// Build frontmatter YAML\nlet frontmatter = `---\ntitle: \"${data.title}\"\ncategory: ${data.category}\ntags:\n`;\n\n// Add tags\nfor (const tag of data.tags) {\n  frontmatter += `  - ${tag}\n`;\n}\n\nfrontmatter += `description: \"${data.summary}\"\ndate_created: ${data.metadata.dateCreated}\ndate_processed: ${new Date().toISOString()}\nsource: ${data.metadata.source}\n`;\n\nif (data.metadata.sourceId) {\n  frontmatter += `source_id: ${data.metadata.sourceId}\n`;\n}\n\nif (data.metadata.url) {\n  frontmatter += `source_url: ${data.metadata.url}\n`;\n}\n\nif (data.primaryDomain) {\n  frontmatter += `primary_domain: ${data.primaryDomain}\n`;\n}\n\nif (data.technologies && data.technologies.length > 0) {\n  frontmatter += `technologies:\n`;\n  for (const tech of data.technologies) {\n    frontmatter += `  - ${tech}\n`;\n  }\n}\n\n// Add Project-specific metadata\nif (data.projectMetadata) {\n  const pm = data.projectMetadata;\n  if (pm.project_id) frontmatter += `project_id: ${pm.project_id}\n`;\n  if (pm.repo) frontmatter += `repo: ${pm.repo}\n`;\n  if (pm.project_root) frontmatter += `project_root: ${pm.project_root}\n`;\n  if (pm.status) frontmatter += `status: ${pm.status}\n`;\n  if (pm.stack && pm.stack.length > 0) {\n    frontmatter += `stack:\n`;\n    for (const tech of pm.stack) {\n      frontmatter += `  - ${tech}\n`;\n    }\n  }\n  if (pm.components && pm.components.length > 0) {\n    frontmatter += `components:\n`;\n    for (const comp of pm.components) {\n      frontmatter += `  - ${comp}\n`;\n    }\n  }\n}\n\nfrontmatter += `---\n\n`;\n\n// Build document body\nlet body = `# ${data.title}\n\n`;\n\n// Add metadata section\nbody += `## Metadata\n\n`;\nbody += `- **Category**: ${data.category}\n`;\nbody += `- **Primary Domain**: ${data.primaryDomain || 'N/A'}\n`;\nbody += `- **Date Created**: ${new Date(data.metadata.dateCreated).toLocaleString()}\n`;\nbody += `- **Source**: ${data.metadata.source}\n`;\n\nif (data.metadata.url) {\n  body += `- **Source URL**: [View Original](${data.metadata.url})\n`;\n}\n\nif (data.metadata.participants && data.metadata.participants.length > 0) {\n  body += `- **Participants**: ${data.metadata.participants.map(p => p.name || p.email).join(', ')}\n`;\n}\n\nif (data.metadata.duration) {\n  body += `- **Duration**: ${Math.round(data.metadata.duration)} minutes\n`;\n}\n\nbody += `\n---\n\n`;\n\n// Add summary\nbody += `## Summary\n\n${data.summary}\n\n---\n\n`;\n\n// Add main content\nbody += `## Content\n\n${data.fullTranscript}\n\n`;\n\n// Add AI processing notes\nbody += `---\n\n## AI Processing Notes\n\n`;\nbody += `- **Category Confidence**: ${(data.categoryConfidence * 100).toFixed(1)}%\n`;\nbody += `- **Category Reasoning**: ${data.categoryReasoning}\n`;\nbody += `- **Processing Stage**: ${data.processingStage}\n`;\n\n// Combine frontmatter and body\nconst fullContent = frontmatter + body;\n\nreturn [{\n  json: {\n    filepath: fullPath,\n    filename: filename,\n    subdir: subdir,\n    content: fullContent,\n    category: data.category,\n    title: data.title\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 300],
+      "id": "build-markdown",
+      "name": "Build Markdown with Frontmatter"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Ensure directory exists\nconst fs = require('fs');\nconst path = require('path');\n\nconst data = items[0].json;\nconst dirPath = path.dirname(data.filepath);\n\ntry {\n  if (!fs.existsSync(dirPath)) {\n    fs.mkdirSync(dirPath, { recursive: true });\n    console.log(`Created directory: ${dirPath}`);\n  }\n  return items;\n} catch (error) {\n  throw new Error(`Failed to create directory ${dirPath}: ${error.message}`);\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 300],
+      "id": "ensure-directory",
+      "name": "Ensure Directory Exists"
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "={{ $json.filepath }}",
+        "dataPropertyName": "content",
+        "options": {
+          "append": false,
+          "encoding": "utf8"
+        }
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [940, 300],
+      "id": "write-file",
+      "name": "Write Markdown File"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Return success summary\nconst data = items[0].json;\n\nreturn [{\n  json: {\n    success: true,\n    message: `Successfully created note: ${data.title}`,\n    filepath: data.filepath,\n    filename: data.filename,\n    category: data.category,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1160, 300],
+      "id": "success-summary",
+      "name": "Return Success Summary"
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [[{"node": "Build Markdown with Frontmatter", "type": "main", "index": 0}]]
+    },
+    "Build Markdown with Frontmatter": {
+      "main": [[{"node": "Ensure Directory Exists", "type": "main", "index": 0}]]
+    },
+    "Ensure Directory Exists": {
+      "main": [[{"node": "Write Markdown File", "type": "main", "index": 0}]]
+    },
+    "Write Markdown File": {
+      "main": [[{"node": "Return Success Summary", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
+EOF
+cat phase5-write-obsidian.json
+Output
+
+{
+  "name": "Phase 5: Write to Obsidian with Frontmatter",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "start",
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [280, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Build complete markdown file with frontmatter\nconst data = items[0].json;\n\n// Format date for filename\nconst dateCreated = new Date(data.metadata.dateCreated);\nconst dateStr = dateCreated.toISOString().split('T')[0];\nconst timeStr = dateCreated.toTimeString().split(' ')[0].replace(/:/g, '-');\n\n// Sanitize title for filename\nfunction sanitizeFilename(str) {\n  return str\n    .replace(/[^a-zA-Z0-9-_ ]/g, '_')\n    .replace(/_{2,}/g, '_')\n    .replace(/^_|_$/g, '')\n    .substring(0, 100);\n}\n\nconst safeTitle = sanitizeFilename(data.title);\nconst filename = `${dateStr}_${timeStr}_${safeTitle}.md`;\n\n// Determine subdirectory based on category\nconst categoryPaths = {\n  'Project': 'Projects',\n  'Prompt': 'AI/Prompts',\n  'Thread': 'AI/Threads',\n  'Documentation': 'Documentation',\n  'Research': 'Research',\n  'Blog': 'Blog',\n  'Idea': 'Ideas',\n  'Reference': 'References',\n  'Example': 'Examples',\n  'Transcript': 'Transcripts',\n  'Infrastructure': 'Infrastructure',\n  'Family': 'Family',\n  'Finance': 'Finance'\n};\n\nconst subdir = categoryPaths[data.category] || 'Uncategorized';\nconst fullPath = `/home/delorenj/obsidian-vault/${subdir}/${filename}`;\n\n// Build frontmatter YAML\nlet frontmatter = `---\ntitle: \"${data.title}\"\ncategory: ${data.category}\ntags:\n`;\n\n// Add tags\nfor (const tag of data.tags) {\n  frontmatter += `  - ${tag}\n`;\n}\n\nfrontmatter += `description: \"${data.summary}\"\ndate_created: ${data.metadata.dateCreated}\ndate_processed: ${new Date().toISOString()}\nsource: ${data.metadata.source}\n`;\n\nif (data.metadata.sourceId) {\n  frontmatter += `source_id: ${data.metadata.sourceId}\n`;\n}\n\nif (data.metadata.url) {\n  frontmatter += `source_url: ${data.metadata.url}\n`;\n}\n\nif (data.primaryDomain) {\n  frontmatter += `primary_domain: ${data.primaryDomain}\n`;\n}\n\nif (data.technologies && data.technologies.length > 0) {\n  frontmatter += `technologies:\n`;\n  for (const tech of data.technologies) {\n    frontmatter += `  - ${tech}\n`;\n  }\n}\n\n// Add Project-specific metadata\nif (data.projectMetadata) {\n  const pm = data.projectMetadata;\n  if (pm.project_id) frontmatter += `project_id: ${pm.project_id}\n`;\n  if (pm.repo) frontmatter += `repo: ${pm.repo}\n`;\n  if (pm.project_root) frontmatter += `project_root: ${pm.project_root}\n`;\n  if (pm.status) frontmatter += `status: ${pm.status}\n`;\n  if (pm.stack && pm.stack.length > 0) {\n    frontmatter += `stack:\n`;\n    for (const tech of pm.stack) {\n      frontmatter += `  - ${tech}\n`;\n    }\n  }\n  if (pm.components && pm.components.length > 0) {\n    frontmatter += `components:\n`;\n    for (const comp of pm.components) {\n      frontmatter += `  - ${comp}\n`;\n    }\n  }\n}\n\nfrontmatter += `---\n\n`;\n\n// Build document body\nlet body = `# ${data.title}\n\n`;\n\n// Add metadata section\nbody += `## Metadata\n\n`;\nbody += `- **Category**: ${data.category}\n`;\nbody += `- **Primary Domain**: ${data.primaryDomain || 'N/A'}\n`;\nbody += `- **Date Created**: ${new Date(data.metadata.dateCreated).toLocaleString()}\n`;\nbody += `- **Source**: ${data.metadata.source}\n`;\n\nif (data.metadata.url) {\n  body += `- **Source URL**: [View Original](${data.metadata.url})\n`;\n}\n\nif (data.metadata.participants && data.metadata.participants.length > 0) {\n  body += `- **Participants**: ${data.metadata.participants.map(p => p.name || p.email).join(', ')}\n`;\n}\n\nif (data.metadata.duration) {\n  body += `- **Duration**: ${Math.round(data.metadata.duration)} minutes\n`;\n}\n\nbody += `\n---\n\n`;\n\n// Add summary\nbody += `## Summary\n\n${data.summary}\n\n---\n\n`;\n\n// Add main content\nbody += `## Content\n\n${data.fullTranscript}\n\n`;\n\n// Add AI processing notes\nbody += `---\n\n## AI Processing Notes\n\n`;\nbody += `- **Category Confidence**: ${(data.categoryConfidence * 100).toFixed(1)}%\n`;\nbody += `- **Category Reasoning**: ${data.categoryReasoning}\n`;\nbody += `- **Processing Stage**: ${data.processingStage}\n`;\n\n// Combine frontmatter and body\nconst fullContent = frontmatter + body;\n\nreturn [{\n  json: {\n    filepath: fullPath,\n    filename: filename,\n    subdir: subdir,\n    content: fullContent,\n    category: data.category,\n    title: data.title\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 300],
+      "id": "build-markdown",
+      "name": "Build Markdown with Frontmatter"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Ensure directory exists\nconst fs = require('fs');\nconst path = require('path');\n\nconst data = items[0].json;\nconst dirPath = path.dirname(data.filepath);\n\ntry {\n  if (!fs.existsSync(dirPath)) {\n    fs.mkdirSync(dirPath, { recursive: true });\n    console.log(`Created directory: ${dirPath}`);\n  }\n  return items;\n} catch (error) {\n  throw new Error(`Failed to create directory ${dirPath}: ${error.message}`);\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 300],
+      "id": "ensure-directory",
+      "name": "Ensure Directory Exists"
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "={{ $json.filepath }}",
+        "dataPropertyName": "content",
+        "options": {
+          "append": false,
+          "encoding": "utf8"
+        }
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [940, 300],
+      "id": "write-file",
+      "name": "Write Markdown File"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Return success summary\nconst data = items[0].json;\n\nreturn [{\n  json: {\n    success: true,\n    message: `Successfully created note: ${data.title}`,\n    filepath: data.filepath,\n    filename: data.filename,\n    category: data.category,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1160, 300],
+      "id": "success-summary",
+      "name": "Return Success Summary"
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [[{"node": "Build Markdown with Frontmatter", "type": "main", "index": 0}]]
+    },
+    "Build Markdown with Frontmatter": {
+      "main": [[{"node": "Ensure Directory Exists", "type": "main", "index": 0}]]
+    },
+    "Ensure Directory Exists": {
+      "main": [[{"node": "Write Markdown File", "type": "main", "index": 0}]]
+    },
+    "Write Markdown File": {
+      "main": [[{"node": "Return Success Summary", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

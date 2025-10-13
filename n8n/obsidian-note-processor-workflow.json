@@ -1,0 +1,214 @@
+{
+  "name": "Obsidian Note Processor - Main Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "trigger-start",
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [280, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Validate and prepare input data\nconst inputData = items[0].json;\n\nif (!inputData?.content?.data) {\n  throw new Error('Invalid input: missing content.data');\n}\n\nconst data = inputData.content.data;\nconst rawContent = data.transcript || data.raw_text || '';\n\n// Extract basic metadata\nconst metadata = {\n  source: data.source || 'fireflies',\n  sourceId: data.id || `note_${Date.now()}`,\n  dateCreated: data.dateString || data.date || new Date().toISOString(),\n  rawTitle: data.title || 'Untitled',\n  rawContent: rawContent,\n  participants: data.participants || [],\n  duration: data.duration || 0,\n  url: data.transcript_url || data.url || ''\n};\n\n// Format for downstream processing\nreturn [{\n  json: {\n    metadata: metadata,\n    fullTranscript: rawContent,\n    processingStage: 'initialized'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 300],
+      "id": "validate-input",
+      "name": "Validate & Prepare Input"
+    },
+    {
+      "parameters": {
+        "workflow": "={{ $workflow.id }}",
+        "workflowId": "obsidian-phase1-summarization"
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [720, 300],
+      "id": "phase1-summarization",
+      "name": "Phase 1: Summarization"
+    },
+    {
+      "parameters": {
+        "workflow": "={{ $workflow.id }}",
+        "workflowId": "obsidian-phase2-categorization"
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [940, 300],
+      "id": "phase2-categorization",
+      "name": "Phase 2: Categorization"
+    },
+    {
+      "parameters": {
+        "workflow": "={{ $workflow.id }}",
+        "workflowId": "obsidian-phase3-tagging"
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [1160, 300],
+      "id": "phase3-tagging",
+      "name": "Phase 3: Tagging"
+    },
+    {
+      "parameters": {
+        "workflow": "={{ $workflow.id }}",
+        "workflowId": "obsidian-phase4-enrichment"
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [1380, 300],
+      "id": "phase4-enrichment",
+      "name": "Phase 4: Category-Specific Enrichment"
+    },
+    {
+      "parameters": {
+        "workflow": "={{ $workflow.id }}",
+        "workflowId": "obsidian-phase5-write"
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [1600, 300],
+      "id": "phase5-write",
+      "name": "Phase 5: Write to Obsidian"
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [[{"node": "Validate & Prepare Input", "type": "main", "index": 0}]]
+    },
+    "Validate & Prepare Input": {
+      "main": [[{"node": "Phase 1: Summarization", "type": "main", "index": 0}]]
+    },
+    "Phase 1: Summarization": {
+      "main": [[{"node": "Phase 2: Categorization", "type": "main", "index": 0}]]
+    },
+    "Phase 2: Categorization": {
+      "main": [[{"node": "Phase 3: Tagging", "type": "main", "index": 0}]]
+    },
+    "Phase 3: Tagging": {
+      "main": [[{"node": "Phase 4: Category-Specific Enrichment", "type": "main", "index": 0}]]
+    },
+    "Phase 4: Category-Specific Enrichment": {
+      "main": [[{"node": "Phase 5: Write to Obsidian", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
+EOF
+cat obsidian-note-processor-workflow.json
+Output
+
+{
+  "name": "Obsidian Note Processor - Main Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "trigger-start",
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [280, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Validate and prepare input data\nconst inputData = items[0].json;\n\nif (!inputData?.content?.data) {\n  throw new Error('Invalid input: missing content.data');\n}\n\nconst data = inputData.content.data;\nconst rawContent = data.transcript || data.raw_text || '';\n\n// Extract basic metadata\nconst metadata = {\n  source: data.source || 'fireflies',\n  sourceId: data.id || `note_${Date.now()}`,\n  dateCreated: data.dateString || data.date || new Date().toISOString(),\n  rawTitle: data.title || 'Untitled',\n  rawContent: rawContent,\n  participants: data.participants || [],\n  duration: data.duration || 0,\n  url: data.transcript_url || data.url || ''\n};\n\n// Format for downstream processing\nreturn [{\n  json: {\n    metadata: metadata,\n    fullTranscript: rawContent,\n    processingStage: 'initialized'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 300],
+      "id": "validate-input",
+      "name": "Validate & Prepare Input"
+    },
+    {
+      "parameters": {
+        "workflow": "={{ $workflow.id }}",
+        "workflowId": "obsidian-phase1-summarization"
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [720, 300],
+      "id": "phase1-summarization",
+      "name": "Phase 1: Summarization"
+    },
+    {
+      "parameters": {
+        "workflow": "={{ $workflow.id }}",
+        "workflowId": "obsidian-phase2-categorization"
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [940, 300],
+      "id": "phase2-categorization",
+      "name": "Phase 2: Categorization"
+    },
+    {
+      "parameters": {
+        "workflow": "={{ $workflow.id }}",
+        "workflowId": "obsidian-phase3-tagging"
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [1160, 300],
+      "id": "phase3-tagging",
+      "name": "Phase 3: Tagging"
+    },
+    {
+      "parameters": {
+        "workflow": "={{ $workflow.id }}",
+        "workflowId": "obsidian-phase4-enrichment"
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [1380, 300],
+      "id": "phase4-enrichment",
+      "name": "Phase 4: Category-Specific Enrichment"
+    },
+    {
+      "parameters": {
+        "workflow": "={{ $workflow.id }}",
+        "workflowId": "obsidian-phase5-write"
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [1600, 300],
+      "id": "phase5-write",
+      "name": "Phase 5: Write to Obsidian"
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [[{"node": "Validate & Prepare Input", "type": "main", "index": 0}]]
+    },
+    "Validate & Prepare Input": {
+      "main": [[{"node": "Phase 1: Summarization", "type": "main", "index": 0}]]
+    },
+    "Phase 1: Summarization": {
+      "main": [[{"node": "Phase 2: Categorization", "type": "main", "index": 0}]]
+    },
+    "Phase 2: Categorization": {
+      "main": [[{"node": "Phase 3: Tagging", "type": "main", "index": 0}]]
+    },
+    "Phase 3: Tagging": {
+      "main": [[{"node": "Phase 4: Category-Specific Enrichment", "type": "main", "index": 0}]]
+    },
+    "Phase 4: Category-Specific Enrichment": {
+      "main": [[{"node": "Phase 5: Write to Obsidian", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

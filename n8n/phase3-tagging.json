@@ -1,0 +1,168 @@
+{
+  "name": "Phase 3: Multi-Tag Generation",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "start",
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [280, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "anthropic/claude-sonnet-4.5"
+            },
+            {
+              "name": "messages",
+              "value": "={{ JSON.stringify([{\n  role: 'user',\n  content: `You are an expert at generating precise, hierarchical tags for knowledge management.\n\nGenerate 3-7 relevant tags for this document. Tags should:\n- Be specific and descriptive\n- Follow hierarchical structure when appropriate (e.g., \"ai/agents\", \"devops/docker\")\n- Include technology/framework names when relevant\n- Include domain areas (e.g., \"finance\", \"health\", \"education\")\n- Be lowercase with hyphens for spaces (e.g., \"machine-learning\")\n\nDocument:\nCategory: ${$json.category}\nTitle: ${$json.title}\nSummary: ${$json.summary}\n\nContent sample:\n${$json.fullTranscript.substring(0, 1500)}\n\nTag examples based on category:\n- Prompt: #system-prompt, #ai/prompts, #code-generation\n- Thread: #conversation, #ai/claude, #troubleshooting\n- Documentation: #api-docs, #python, #reference\n- Research: #ai/agents, #workflow-automation, #research\n- Blog: #blog/draft, #technical-writing, #ai\n- Transcript: #meeting, #planning, #product-development\n- Infrastructure: #networking, #homelab, #kubernetes\n\nIMPORTANT: Respond ONLY with valid JSON:\n{\n  \"tags\": [\"tag1\", \"tag2\", \"tag3\"],\n  \"primaryDomain\": \"main domain area\",\n  \"technologies\": [\"tech1\", \"tech2\"]\n}\n\nDO NOT include backticks, markdown, or explanations.`\n}]) }}"
+            },
+            {
+              "name": "max_tokens",
+              "value": "300"
+            },
+            {
+              "name": "temperature",
+              "value": "0.4"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300],
+      "id": "ai-tagging",
+      "name": "AI Tag Generation"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Parse AI response and validate tags\nconst response = items[0].json;\nconst inputData = $input.first().json;\n\nlet tagResult;\n\ntry {\n  const responseText = response.choices[0].message.content;\n  const cleanedText = responseText\n    .replace(/```json\\n?/g, '')\n    .replace(/```\\n?/g, '')\n    .trim();\n  \n  tagResult = JSON.parse(cleanedText);\n  \n  // Validate and sanitize tags\n  if (!Array.isArray(tagResult.tags)) {\n    tagResult.tags = [];\n  }\n  \n  // Ensure tags are lowercase and properly formatted\n  tagResult.tags = tagResult.tags\n    .map(tag => tag.toLowerCase().trim())\n    .filter(tag => tag.length > 0)\n    .slice(0, 7); // Max 7 tags\n  \n  // Add category as a tag for consistency\n  const categoryTag = inputData.category.toLowerCase();\n  if (!tagResult.tags.includes(categoryTag)) {\n    tagResult.tags.unshift(categoryTag);\n  }\n  \n  // Add source-specific tags\n  if (inputData.metadata.source === 'fireflies') {\n    if (!tagResult.tags.includes('meeting')) {\n      tagResult.tags.push('meeting');\n    }\n  }\n  \n} catch (e) {\n  console.error('Failed to parse tags:', e);\n  // Fallback tags\n  tagResult = {\n    tags: [inputData.category.toLowerCase(), 'unprocessed'],\n    primaryDomain: 'general',\n    technologies: []\n  };\n}\n\nreturn [{\n  json: {\n    ...inputData,\n    tags: tagResult.tags,\n    primaryDomain: tagResult.primaryDomain || 'general',\n    technologies: tagResult.technologies || [],\n    processingStage: 'tagged'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 300],
+      "id": "parse-tags",
+      "name": "Parse & Validate Tags"
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [[{"node": "AI Tag Generation", "type": "main", "index": 0}]]
+    },
+    "AI Tag Generation": {
+      "main": [[{"node": "Parse & Validate Tags", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
+EOF
+cat phase3-tagging.json
+Output
+
+{
+  "name": "Phase 3: Multi-Tag Generation",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "start",
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [280, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "anthropic/claude-sonnet-4.5"
+            },
+            {
+              "name": "messages",
+              "value": "={{ JSON.stringify([{\n  role: 'user',\n  content: `You are an expert at generating precise, hierarchical tags for knowledge management.\n\nGenerate 3-7 relevant tags for this document. Tags should:\n- Be specific and descriptive\n- Follow hierarchical structure when appropriate (e.g., \"ai/agents\", \"devops/docker\")\n- Include technology/framework names when relevant\n- Include domain areas (e.g., \"finance\", \"health\", \"education\")\n- Be lowercase with hyphens for spaces (e.g., \"machine-learning\")\n\nDocument:\nCategory: ${$json.category}\nTitle: ${$json.title}\nSummary: ${$json.summary}\n\nContent sample:\n${$json.fullTranscript.substring(0, 1500)}\n\nTag examples based on category:\n- Prompt: #system-prompt, #ai/prompts, #code-generation\n- Thread: #conversation, #ai/claude, #troubleshooting\n- Documentation: #api-docs, #python, #reference\n- Research: #ai/agents, #workflow-automation, #research\n- Blog: #blog/draft, #technical-writing, #ai\n- Transcript: #meeting, #planning, #product-development\n- Infrastructure: #networking, #homelab, #kubernetes\n\nIMPORTANT: Respond ONLY with valid JSON:\n{\n  \"tags\": [\"tag1\", \"tag2\", \"tag3\"],\n  \"primaryDomain\": \"main domain area\",\n  \"technologies\": [\"tech1\", \"tech2\"]\n}\n\nDO NOT include backticks, markdown, or explanations.`\n}]) }}"
+            },
+            {
+              "name": "max_tokens",
+              "value": "300"
+            },
+            {
+              "name": "temperature",
+              "value": "0.4"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300],
+      "id": "ai-tagging",
+      "name": "AI Tag Generation"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Parse AI response and validate tags\nconst response = items[0].json;\nconst inputData = $input.first().json;\n\nlet tagResult;\n\ntry {\n  const responseText = response.choices[0].message.content;\n  const cleanedText = responseText\n    .replace(/```json\\n?/g, '')\n    .replace(/```\\n?/g, '')\n    .trim();\n  \n  tagResult = JSON.parse(cleanedText);\n  \n  // Validate and sanitize tags\n  if (!Array.isArray(tagResult.tags)) {\n    tagResult.tags = [];\n  }\n  \n  // Ensure tags are lowercase and properly formatted\n  tagResult.tags = tagResult.tags\n    .map(tag => tag.toLowerCase().trim())\n    .filter(tag => tag.length > 0)\n    .slice(0, 7); // Max 7 tags\n  \n  // Add category as a tag for consistency\n  const categoryTag = inputData.category.toLowerCase();\n  if (!tagResult.tags.includes(categoryTag)) {\n    tagResult.tags.unshift(categoryTag);\n  }\n  \n  // Add source-specific tags\n  if (inputData.metadata.source === 'fireflies') {\n    if (!tagResult.tags.includes('meeting')) {\n      tagResult.tags.push('meeting');\n    }\n  }\n  \n} catch (e) {\n  console.error('Failed to parse tags:', e);\n  // Fallback tags\n  tagResult = {\n    tags: [inputData.category.toLowerCase(), 'unprocessed'],\n    primaryDomain: 'general',\n    technologies: []\n  };\n}\n\nreturn [{\n  json: {\n    ...inputData,\n    tags: tagResult.tags,\n    primaryDomain: tagResult.primaryDomain || 'general',\n    technologies: tagResult.technologies || [],\n    processingStage: 'tagged'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 300],
+      "id": "parse-tags",
+      "name": "Parse & Validate Tags"
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [[{"node": "AI Tag Generation", "type": "main", "index": 0}]]
+    },
+    "AI Tag Generation": {
+      "main": [[{"node": "Parse & Validate Tags", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

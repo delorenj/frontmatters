@@ -1,0 +1,282 @@
+{
+  "name": "Phase 4: Category-Specific Enrichment",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "start",
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [280, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.category }}",
+              "rightValue": "Project",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [500, 300],
+      "id": "check-category",
+      "name": "Is Project Category?"
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "anthropic/claude-sonnet-4.5"
+            },
+            {
+              "name": "messages",
+              "value": "={{ JSON.stringify([{\n  role: 'user',\n  content: `Extract project-specific metadata from this content.\n\nDocument:\nTitle: ${$json.title}\nSummary: ${$json.summary}\nContent:\n${$json.fullTranscript.substring(0, 2000)}\n\nExtract if mentioned:\n- project_id: Database ID if mentioned\n- repo: Git repository URL or name\n- project_root: Root directory path\n- status: Project status (planning/active/on-hold/completed)\n- stack: Technology stack (array of technologies)\n- components: List of major components\n\nIMPORTANT: Respond ONLY with valid JSON:\n{\n  \"project_id\": \"id or null\",\n  \"repo\": \"repo name/url or null\",\n  \"project_root\": \"path or null\",\n  \"status\": \"status or 'active'\",\n  \"stack\": [\"tech1\", \"tech2\"],\n  \"components\": [\"component1\", \"component2\"]\n}\n\nIf information is not found, use null or empty arrays. DO NOT include backticks or markdown.`\n}]) }}"
+            },
+            {
+              "name": "max_tokens",
+              "value": "400"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 200],
+      "id": "extract-project-metadata",
+      "name": "Extract Project Metadata"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Parse project metadata from AI response\nconst response = items[0].json;\nconst inputData = $input.first().json;\n\nlet projectMetadata = {};\n\ntry {\n  const responseText = response.choices[0].message.content;\n  const cleanedText = responseText\n    .replace(/```json\\n?/g, '')\n    .replace(/```\\n?/g, '')\n    .trim();\n  \n  projectMetadata = JSON.parse(cleanedText);\n} catch (e) {\n  console.error('Failed to parse project metadata:', e);\n  projectMetadata = {\n    project_id: null,\n    repo: null,\n    project_root: null,\n    status: 'active',\n    stack: [],\n    components: []\n  };\n}\n\nreturn [{\n  json: {\n    ...inputData,\n    projectMetadata: projectMetadata,\n    processingStage: 'enriched'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [940, 200],
+      "id": "parse-project-metadata",
+      "name": "Parse Project Metadata"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// For non-Project categories, just pass through\nconst inputData = items[0].json;\n\nreturn [{\n  json: {\n    ...inputData,\n    projectMetadata: null,\n    processingStage: 'enriched'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 400],
+      "id": "passthrough",
+      "name": "Pass Through (No Enrichment)"
+    },
+    {
+      "parameters": {
+        "mode": "mergeByPosition"
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [1160, 300],
+      "id": "merge-paths",
+      "name": "Merge Paths"
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [[{"node": "Is Project Category?", "type": "main", "index": 0}]]
+    },
+    "Is Project Category?": {
+      "main": [
+        [{"node": "Extract Project Metadata", "type": "main", "index": 0}],
+        [{"node": "Pass Through (No Enrichment)", "type": "main", "index": 0}]
+      ]
+    },
+    "Extract Project Metadata": {
+      "main": [[{"node": "Parse Project Metadata", "type": "main", "index": 0}]]
+    },
+    "Parse Project Metadata": {
+      "main": [[{"node": "Merge Paths", "type": "main", "index": 0}]]
+    },
+    "Pass Through (No Enrichment)": {
+      "main": [[{"node": "Merge Paths", "type": "main", "index": 1}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
+EOF
+cat phase4-enrichment.json
+Output
+
+{
+  "name": "Phase 4: Category-Specific Enrichment",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "start",
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [280, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.category }}",
+              "rightValue": "Project",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [500, 300],
+      "id": "check-category",
+      "name": "Is Project Category?"
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "anthropic/claude-sonnet-4.5"
+            },
+            {
+              "name": "messages",
+              "value": "={{ JSON.stringify([{\n  role: 'user',\n  content: `Extract project-specific metadata from this content.\n\nDocument:\nTitle: ${$json.title}\nSummary: ${$json.summary}\nContent:\n${$json.fullTranscript.substring(0, 2000)}\n\nExtract if mentioned:\n- project_id: Database ID if mentioned\n- repo: Git repository URL or name\n- project_root: Root directory path\n- status: Project status (planning/active/on-hold/completed)\n- stack: Technology stack (array of technologies)\n- components: List of major components\n\nIMPORTANT: Respond ONLY with valid JSON:\n{\n  \"project_id\": \"id or null\",\n  \"repo\": \"repo name/url or null\",\n  \"project_root\": \"path or null\",\n  \"status\": \"status or 'active'\",\n  \"stack\": [\"tech1\", \"tech2\"],\n  \"components\": [\"component1\", \"component2\"]\n}\n\nIf information is not found, use null or empty arrays. DO NOT include backticks or markdown.`\n}]) }}"
+            },
+            {
+              "name": "max_tokens",
+              "value": "400"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 200],
+      "id": "extract-project-metadata",
+      "name": "Extract Project Metadata"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Parse project metadata from AI response\nconst response = items[0].json;\nconst inputData = $input.first().json;\n\nlet projectMetadata = {};\n\ntry {\n  const responseText = response.choices[0].message.content;\n  const cleanedText = responseText\n    .replace(/```json\\n?/g, '')\n    .replace(/```\\n?/g, '')\n    .trim();\n  \n  projectMetadata = JSON.parse(cleanedText);\n} catch (e) {\n  console.error('Failed to parse project metadata:', e);\n  projectMetadata = {\n    project_id: null,\n    repo: null,\n    project_root: null,\n    status: 'active',\n    stack: [],\n    components: []\n  };\n}\n\nreturn [{\n  json: {\n    ...inputData,\n    projectMetadata: projectMetadata,\n    processingStage: 'enriched'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [940, 200],
+      "id": "parse-project-metadata",
+      "name": "Parse Project Metadata"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// For non-Project categories, just pass through\nconst inputData = items[0].json;\n\nreturn [{\n  json: {\n    ...inputData,\n    projectMetadata: null,\n    processingStage: 'enriched'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 400],
+      "id": "passthrough",
+      "name": "Pass Through (No Enrichment)"
+    },
+    {
+      "parameters": {
+        "mode": "mergeByPosition"
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [1160, 300],
+      "id": "merge-paths",
+      "name": "Merge Paths"
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [[{"node": "Is Project Category?", "type": "main", "index": 0}]]
+    },
+    "Is Project Category?": {
+      "main": [
+        [{"node": "Extract Project Metadata", "type": "main", "index": 0}],
+        [{"node": "Pass Through (No Enrichment)", "type": "main", "index": 0}]
+      ]
+    },
+    "Extract Project Metadata": {
+      "main": [[{"node": "Parse Project Metadata", "type": "main", "index": 0}]]
+    },
+    "Parse Project Metadata": {
+      "main": [[{"node": "Merge Paths", "type": "main", "index": 0}]]
+    },
+    "Pass Through (No Enrichment)": {
+      "main": [[{"node": "Merge Paths", "type": "main", "index": 1}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
