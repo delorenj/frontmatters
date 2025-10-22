@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.12"
 
 [[package]]
@@ -484,6 +484,7 @@ dependencies = [
     { name = "openai" },
     { name = "openrouter" },
     { name = "python-frontmatter" },
+    { name = "rich" },
     { name = "sqlalchemy" },
     { name = "typer" },
     { name = "uvicorn" },
@@ -495,6 +496,7 @@ dev = [
     { name = "mypy" },
     { name = "pytest" },
     { name = "pytest-cov" },
+    { name = "python-frontmatter" },
     { name = "ruff" },
 ]
 
@@ -507,6 +509,7 @@ requires-dist = [
     { name = "openai", specifier = ">=1.0.0" },
     { name = "openrouter", specifier = ">=1.0" },
     { name = "python-frontmatter", specifier = ">=1.1.0" },
+    { name = "rich", specifier = ">=13.0.0" },
     { name = "sqlalchemy", specifier = ">=2.0.43" },
     { name = "typer", specifier = ">=0.17.4" },
     { name = "uvicorn", specifier = ">=0.30.0" },
@@ -518,6 +521,7 @@ dev = [
     { name = "mypy", specifier = ">=1.0.0" },
     { name = "pytest", specifier = ">=7.0.0" },
     { name = "pytest-cov", specifier = ">=4.0.0" },
+    { name = "python-frontmatter", specifier = ">=1.1.0" },
     { name = "ruff", specifier = ">=0.1.0" },
 ]
 

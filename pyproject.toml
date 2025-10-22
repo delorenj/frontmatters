@@ -15,6 +15,7 @@ dependencies = [
   "uvicorn>=0.30.0",
   "fastapi>=0.118.0",
   "sqlalchemy>=2.0.43",
+  "rich>=13.0.0",
 ]
 [project.scripts]
 frontmatters = "frontmatters.main:app"
@@ -32,6 +33,7 @@ dev-dependencies = [
   "black>=23.0.0",
   "ruff>=0.1.0",
   "mypy>=1.0.0",
+  "python-frontmatter>=1.1.0",
 ]
 
 [tool.ruff]
