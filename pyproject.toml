@@ -1,6 +1,6 @@
 [project]
 name = "frontmatters"
-version = "0.1.0"
+version = "0.2.0"
 description = "A tool to manage and manipulate frontmatter in markdown files."
 readme = "README.md"
 requires-python = ">=3.12"
